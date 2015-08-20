@@ -55,6 +55,10 @@ class Benchmark {
 void SetBenchmarkBytesProcessed(int64_t);
 void StopBenchmarkTiming();
 void StartBenchmarkTiming();
+void StopBenchmarkTimingWithStd();
+void StopBenchmarkTimingWithArg(int);
+void Standard();
+void Confidence(double, double);
 
 #define BENCHMARK(f) \
     static ::testing::Benchmark* _benchmark_##f __attribute__((unused)) = \

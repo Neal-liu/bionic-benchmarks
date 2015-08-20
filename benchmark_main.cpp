@@ -28,12 +28,16 @@
 static int64_t g_bytes_processed;
 static int64_t g_benchmark_total_time_ns;
 static int64_t g_benchmark_start_time_ns;
+static int64_t *benchmark_each_time_ns;
 
 typedef std::map<std::string, ::testing::Benchmark*> BenchmarkMap;
 typedef BenchmarkMap::iterator BenchmarkMapIt;
 static BenchmarkMap g_benchmarks;
 static int g_name_column_width = 20;
 bool plot = false;
+static int Iterations = 1;
+static int con_iterations = 0;
+static int count = 0;
 
 static int Round(int n) {
   int base = 1;
@@ -73,8 +77,11 @@ bool Benchmark::ShouldRun(int argc, char* argv[]) {
   }
 
   for (int i = 1 ; i < argc ; i++) {
-	if(strcmp(argv[i], "--plot") == 0) 
+	if(strcmp(argv[i], "--plot") == 0) {
 		plot = true;	// With plot arguments.
+		if(argc == 2)
+			return true;
+	}
   }
   // Otherwise, we interpret each argument as a regular expression and
   // see if any of our benchmarks match.
@@ -91,6 +98,7 @@ bool Benchmark::ShouldRun(int argc, char* argv[]) {
       return true;
     }
   }
+  
   return false;
 }
 
@@ -117,6 +125,9 @@ void Benchmark::Run() {
     }
     for (size_t i = 0; i < args_.size(); ++i) {
       RunWithArg(args_[i]);
+	  count = 0;
+	  con_iterations = 0;
+//	  delete benchmark_each_time_ns;
     }
   }
 }
@@ -125,11 +136,17 @@ void Benchmark::RunRepeatedlyWithArg(int iterations, int arg) {
   g_bytes_processed = 0;
   g_benchmark_total_time_ns = 0;
   g_benchmark_start_time_ns = NanoTime();
+
+	count = 0 ;
+	Iterations = iterations;
+	benchmark_each_time_ns = new int64_t[Iterations];
+
   if (fn_ != NULL) {
     fn_(iterations);
   } else {
     fn_range_(iterations, arg);
   }
+
   if (g_benchmark_start_time_ns != 0) {
     g_benchmark_total_time_ns += NanoTime() - g_benchmark_start_time_ns;
   }
@@ -138,6 +155,10 @@ void Benchmark::RunRepeatedlyWithArg(int iterations, int arg) {
 void Benchmark::RunWithArg(int arg) {
   // run once in case it's expensive
   int iterations = 1;
+
+//	Iterations = iterations;
+//	benchmark_each_time_ns = new int64_t[Iterations];
+
   RunRepeatedlyWithArg(iterations, arg);
   while (g_benchmark_total_time_ns < 1e9 && iterations < 1e9) {
     int last = iterations;
@@ -148,6 +169,10 @@ void Benchmark::RunWithArg(int arg) {
     }
     iterations = std::max(last + 1, std::min(iterations + iterations/2, 100*last));
     iterations = Round(iterations);
+
+//	Iterations = iterations;
+//	benchmark_each_time_ns = new int64_t[Iterations];
+
     RunRepeatedlyWithArg(iterations, arg);
   }
 
@@ -176,7 +201,13 @@ void Benchmark::RunWithArg(int arg) {
   } else {
     snprintf(full_name, sizeof(full_name), "%s", name_);
   }
+//	printf("before iterations : %d\n", iterations);
 
+	/* calculate standard diviasion. */
+	Standard();
+	iterations = con_iterations;
+
+//	printf("total time ns is %10" PRId64 "\n", g_benchmark_total_time_ns);
   printf("%-*s %10d %10" PRId64 "%s\n", g_name_column_width, full_name,
          iterations, g_benchmark_total_time_ns/iterations, throughput);
 	if(plot)
@@ -192,8 +223,33 @@ void SetBenchmarkBytesProcessed(int64_t x) {
   g_bytes_processed = x;
 }
 
+void StopBenchmarkTimingWithArg(int iters) {
+  if (g_benchmark_start_time_ns != 0) {
+  	double interval = NanoTime() - g_benchmark_start_time_ns;
+  	benchmark_each_time_ns[count] = interval/(double)iters;
+//	printf("each is %10" PRId64 "\n", benchmark_each_time_ns[count]);
+	count ++;
+    g_benchmark_total_time_ns += interval/(double)iters;
+//	g_benchmark_total_time_ns /= iters;
+  }
+  g_benchmark_start_time_ns = 0;
+}
+
+void StopBenchmarkTimingWithStd() {
+  if (g_benchmark_start_time_ns != 0) {
+  
+  	double interval = NanoTime() - g_benchmark_start_time_ns;
+  	benchmark_each_time_ns[count] = interval;
+//	printf("each is %10" PRId64 "\n", benchmark_each_time_ns[count]);
+    g_benchmark_total_time_ns += NanoTime() - g_benchmark_start_time_ns;
+	count++;
+  }
+  g_benchmark_start_time_ns = 0;
+}
+
 void StopBenchmarkTiming() {
   if (g_benchmark_start_time_ns != 0) {
+  
     g_benchmark_total_time_ns += NanoTime() - g_benchmark_start_time_ns;
   }
   g_benchmark_start_time_ns = 0;
@@ -203,6 +259,40 @@ void StartBenchmarkTiming() {
   if (g_benchmark_start_time_ns == 0) {
     g_benchmark_start_time_ns = NanoTime();
   }
+}
+
+/* Calculate standard diviation. */
+void Standard() {
+	int i;
+	double average = 0, standard = 0, sigma = 0, value = 0;
+	average = g_benchmark_total_time_ns/Iterations;
+	
+	for(i = 0 ; i < Iterations ; i++) {
+		standard = benchmark_each_time_ns[i] - average;
+		standard *= standard;
+		sigma += standard;
+	}
+	sigma /= Iterations;
+	value = sqrt(sigma);
+//	printf("The average is %f, standard deviation is %f\n", average, value);
+	Confidence(average, value);
+}
+
+/* Take the value between 95% confidence level. */
+void Confidence(double average, double value) {
+	int i;
+	int64_t max = average + 2*value;		
+	int64_t min = average - 2*value;
+
+	g_benchmark_total_time_ns = 0;
+	for(i = 0 ; i<Iterations ; i++) {
+		if(benchmark_each_time_ns[i]<max && benchmark_each_time_ns[i]>min) {
+			g_benchmark_total_time_ns += benchmark_each_time_ns[i];
+			con_iterations++;
+//			printf("total is %10" PRId64 "\n", g_benchmark_total_time_ns);
+		}
+	}
+//	printf("con_iterations is %d\n", con_iterations);
 }
 
 int main(int argc, char* argv[]) {
