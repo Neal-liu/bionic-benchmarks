@@ -31,11 +31,15 @@ static void BM_string_memcmp(int iters, int nbytes) {
   char* src = new char[nbytes]; char* dst = new char[nbytes];
   memset(src, 'x', nbytes);
   memset(dst, 'x', nbytes);
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   volatile int c __attribute__((unused)) = 0;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     c += memcmp(dst, src, nbytes);
+
+  	StopBenchmarkTimingWithStd();
   }
 
   StopBenchmarkTiming();
@@ -52,7 +56,11 @@ static void BM_string_memcpy(int iters, int nbytes) {
   StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     memcpy(dst, src, nbytes);
+
+  	StopBenchmarkTimingWithStd();
   }
 
   StopBenchmarkTiming();
@@ -69,7 +77,11 @@ static void BM_string_memmove(int iters, int nbytes) {
   StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     memmove(buf, buf + 1, nbytes); // Worst-case overlap.
+  
+  	StopBenchmarkTimingWithStd();
   }
 
   StopBenchmarkTiming();
@@ -84,7 +96,11 @@ static void BM_string_memset(int iters, int nbytes) {
   StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     memset(dst, 0, nbytes);
+
+  	StopBenchmarkTimingWithStd();
   }
 
   StopBenchmarkTiming();
@@ -102,7 +118,11 @@ static void BM_string_strlen(int iters, int nbytes) {
 
   volatile int c __attribute__((unused)) = 0;
   for (int i = 0; i < iters; ++i) {
+ 	StartBenchmarkTiming();
+
     c += strlen(s);
+
+  	StopBenchmarkTimingWithStd();
   }
 
   StopBenchmarkTiming();

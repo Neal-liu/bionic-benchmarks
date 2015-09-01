@@ -1,49 +1,187 @@
                                  iterations      ns/op
-BM_malloc_test/512                   489702       2115
-BM_malloc_test/1K                    499760       2088
-BM_malloc_test/2K                    489682       2116
-BM_malloc_test/4K                    499768       2057
-BM_malloc_test/8K                    489701       2109
-BM_malloc_test/16K                   499791       2058
-BM_malloc_test/32K                   489688       2099
-BM_malloc_test/64K                    49895      40916
-BM_malloc_test/128K                   49898      41664
-BM_malloc_test/256K                   49878      42333
-BM_malloc_test/512K                   49886      43516
-BM_malloc_test/1M                     49865      51049
-BM_malloc_test/2M                     19960      34977
-BM_malloc_test/4M                     19959      39897
-BM_malloc_test/8M                      9840     100039
-BM_malloc_test/16M                     9825     139094
-BM_malloc_test/32M                     9788     216822
-BM_malloc_test/64M                     4999   34733594
-BM_malloc_test2/512                  489669       2343
-BM_malloc_test2/1K                   489685       2337
-BM_malloc_test2/2K                   489670       2353
-BM_malloc_test2/4K                   489671       2328
-BM_malloc_test2/8K                   489674       2323
-BM_malloc_test2/16K                  489669       2334
-BM_malloc_test2/32K                    9834     130933
-BM_malloc_test2/64K                   19960      43556
-BM_malloc_test2/128K                   9844      95373
-BM_malloc_test2/256K                   9839     117154
-BM_malloc_test2/512K                   9825     147143
-BM_malloc_test2/1M                     9784     221862
-BM_malloc_test2/2M                     4997     351052
-BM_malloc_test2/4M                     4899     469420
-BM_malloc_test2/8M                     4897     673165
-BM_malloc_test2/16M                    1899    1082779
-BM_malloc_test2/32M                     899    1901175
-BM_malloc_test2/64M                     399    3546587
-BM_malloc_test3/512                 3984407        673
-BM_malloc_test3/1K                  3984400        676
-BM_malloc_test3/2K                  3984018        681
-BM_malloc_test3/4K                  3983999        687
-BM_malloc_test3/8K                  3983978        687
-BM_malloc_test3/16K                 3983998        687
-BM_malloc_test3/32K                 3983976        690
-BM_malloc_test3/64K                   49358      24722
-BM_malloc_test3/128K                  49152      32563
-BM_malloc_test3/256K                  38937      46608
-BM_malloc_test3/512K                  38899      48313
-BM_malloc_test3/1M                    38782      54268
+BM_malloc_multi/512                 4992786        673
+BM_malloc_multi/1K                  4992831        673
+BM_malloc_multi/2K                  4991901        677
+BM_malloc_multi/4K                  4991764        681
+BM_malloc_multi/8K                  4991729        685
+BM_malloc_multi/16K                 4991797        688
+BM_malloc_multi/32K                 4991812        681
+BM_malloc_multi/64K                   49192      31098
+BM_malloc_multi/128K                  48940      40821
+BM_malloc_multi/256K                  48793      46542
+BM_malloc_multi/512K                  48748      48283
+BM_malloc_multi/1M                    48605      54191
+BM_malloc_multi/2M                    48366      63632
+BM_malloc_multi/4M                    19242      74301
+BM_malloc_multi/8M                    19021      95908
+BM_malloc_multi/16M                    9298     138740
+BM_malloc_multi/32M                    8868     224287
+BM_malloc_multi/64M                    4917     397350
+BM_malloc_multi/128M                   4985     739616
+BM_malloc_realloc/512                499747       2309
+BM_malloc_realloc/1K                 499743       2310
+BM_malloc_realloc/2K                 499782       2311
+BM_malloc_realloc/4K                 499768       2306
+BM_malloc_realloc/8K                 499763       2318
+BM_malloc_realloc/16K                499767       2306
+BM_malloc_realloc/32K                  9927     135443
+BM_malloc_realloc/64K                  9951     102741
+BM_malloc_realloc/128K                 9946     111200
+BM_malloc_realloc/256K                 9927     140286
+BM_malloc_realloc/512K                 9913     172058
+BM_malloc_realloc/1M                   9877     247835
+BM_malloc_realloc/2M                   4900     382107
+BM_malloc_realloc/4M                   4875     492018
+BM_malloc_realloc/8M                   4829     695897
+BM_malloc_realloc/16M                  1890    1104947
+BM_malloc_realloc/32M                   995    1925498
+BM_malloc_realloc/64M                   499    3562172
+BM_malloc_realloc/128M                  499    6831226
+BM_malloc_realloc/256M                   96   13363553
+BM_malloc_single/512                 499779       2090
+BM_malloc_single/1K                  499789       2090
+BM_malloc_single/2K                  499774       2091
+BM_malloc_single/4K                  499801       2087
+BM_malloc_single/8K                  499786       2091
+BM_malloc_single/16K                 499778       2091
+BM_malloc_single/32K                 499776       2091
+BM_malloc_single/64K                  49842      57975
+BM_malloc_single/128K                 49744      59122
+BM_malloc_single/256K                 19932      60162
+BM_malloc_single/512K                 49842      61508
+BM_malloc_single/1M                   49825      65000
+BM_malloc_single/2M                   19905      87324
+BM_malloc_single/4M                    9948      98097
+BM_malloc_single/8M                    9934     116885
+BM_malloc_single/16M                   9919     156044
+BM_malloc_single/32M                   9878     233656
+BM_malloc_single/64M                   4894     388950
+BM_malloc_single/128M                  4813     700093
+BM_malloc_single/256M                  1860    1321212
+BM_math_fpclassify_INFINITE          499832       1570
+BM_math_fpclassify_NAN               999682        784
+BM_math_fpclassify_NORMAL           1499529        524
+BM_math_fpclassify_ZERO             1999372        391
+BM_math_isinf_INFINITE              2499195        319
+BM_math_isinf_NAN                   2999024        266
+BM_math_isinf_NORMAL                3498849        229
+BM_math_isinf_ZERO                  3998695        197
+BM_math_log10                       4498525        197
+BM_math_logb                        4998345        162
+BM_math_sin_fast                    5498124        167
+BM_math_sin_fesetenv                5997705        182
+BM_math_sin_feupdateenv             6497456        182
+BM_math_sqrt                        6997186        164
+BM_property_find/1                  7496937        156
+BM_property_find/4                   499719       2415
+BM_property_find/16                  499709       2519
+BM_property_find/64                  499700       2655
+BM_property_find/128                 499674       2786
+BM_property_find/256                 499706       2937
+BM_property_find/512                 499685       3072
+BM_property_get/1                    499748       2448
+BM_property_get/4                    499753       2520
+BM_property_get/16                   499731       2635
+BM_property_get/64                   499722       2789
+BM_property_get/128                  499710       2931
+BM_property_get/256                  499695       3081
+BM_property_get/512                  499657       3225
+BM_property_read/1                   499831       1682
+BM_property_read/4                   499818       1696
+BM_property_read/16                  499812       1719
+BM_property_read/64                  499834       1722
+BM_property_read/128                 499826       1731
+BM_property_read/256                 499810       1739
+BM_property_read/512                 499829       1742
+BM_property_serial/1                 499837       1566
+BM_property_serial/4                 499843       1567
+BM_property_serial/16                499824       1566
+BM_property_serial/64                499823       1571
+BM_property_serial/128               499848       1571
+BM_property_serial/256               499839       1570
+BM_property_serial/512               499837       1576
+BM_pthread_getspecific               499827       1567
+BM_pthread_mutex_lock                999647        874
+BM_pthread_mutex_lock_ERRORCHECK    1499474        598
+BM_pthread_mutex_lock_RECURSIVE     1999278        447
+BM_pthread_once                     2499129        324
+BM_pthread_self                     2998962        264
+BM_semaphore_sem_getvalue           3498791        224
+BM_semaphore_sem_wait_sem_post      3998618        232
+BM_stdio_fread/1                    4498434        211     0.27 MiB/s
+BM_stdio_fread/2                     499818       1903     0.53 MiB/s
+BM_stdio_fread/3                     499795       1902     0.80 MiB/s
+BM_stdio_fread/4                     499794       1902     1.07 MiB/s
+BM_stdio_fread/8                     499804       1905     2.14 MiB/s
+BM_stdio_fread/16                    499817       1917     4.27 MiB/s
+BM_stdio_fread/32                    499806       1947     8.47 MiB/s
+BM_stdio_fread/64                    499808       1969    16.81 MiB/s
+BM_stdio_fread/512                   499756       2369   121.53 MiB/s
+BM_stdio_fread/1K                    499685       2879   216.57 MiB/s
+BM_stdio_fread/4K                    499465       5551   549.26 MiB/s
+BM_stdio_fread/8K                    199649       8849   759.91 MiB/s
+BM_stdio_fread/16K                    99709      15261   949.07 MiB/s
+BM_stdio_fread/64K                    49449      53950  1166.28 MiB/s
+BM_stdio_fwrite/1                    499792       1956     0.26 MiB/s
+BM_stdio_fwrite/2                    499782       1959     0.52 MiB/s
+BM_stdio_fwrite/3                    499797       1957     0.78 MiB/s
+BM_stdio_fwrite/4                    499797       1960     1.04 MiB/s
+BM_stdio_fwrite/8                    499793       1959     2.07 MiB/s
+BM_stdio_fwrite/16                   499810       1948     4.18 MiB/s
+BM_stdio_fwrite/32                   499796       1944     8.39 MiB/s
+BM_stdio_fwrite/64                   499789       1958    16.76 MiB/s
+BM_stdio_fwrite/512                  499801       1951   133.61 MiB/s
+BM_stdio_fwrite/1K                   499805       1963   267.80 MiB/s
+BM_stdio_fwrite/4K                   499795       1956  1071.38 MiB/s
+BM_stdio_fwrite/8K                   499811       1952  2148.52 MiB/s
+BM_stdio_fwrite/16K                  499798       1955  4267.95 MiB/s
+BM_stdio_fwrite/64K                  499806       1958 17117.24 MiB/s
+BM_string_memcmp/8                   499840       1614     2.32 MiB/s
+BM_string_memcmp/64                  499831       1656    18.34 MiB/s
+BM_string_memcmp/512                 499733       2472   118.43 MiB/s
+BM_string_memcmp/1K                  499673       3397   195.07 MiB/s
+BM_string_memcmp/8K                   99668      16327   449.49 MiB/s
+BM_string_memcmp/16K                  49995      31352   491.03 MiB/s
+BM_string_memcmp/32K                  49394      60678   521.61 MiB/s
+BM_string_memcmp/64K                   9759     119650   536.68 MiB/s
+BM_string_memcpy/8                   499840       1569     2.34 MiB/s
+BM_string_memcpy/64                  499854       1596    18.63 MiB/s
+BM_string_memcpy/512                 499837       1677   145.31 MiB/s
+BM_string_memcpy/1K                  499814       1804   280.62 MiB/s
+BM_string_memcpy/8K                  499681       3223  1612.28 MiB/s
+BM_string_memcpy/16K                 199810       4999  2400.42 MiB/s
+BM_string_memcpy/32K                 199585      10085  2729.80 MiB/s
+BM_string_memcpy/64K                  99520      23853  2539.38 MiB/s
+BM_string_memmove/8                  499841       1627     2.28 MiB/s
+BM_string_memmove/64                 499811       1850    17.35 MiB/s
+BM_string_memmove/512                499667       3545    94.61 MiB/s
+BM_string_memmove/1K                 499403       5455   139.77 MiB/s
+BM_string_memmove/8K                  49667      32368   237.65 MiB/s
+BM_string_memmove/16K                 49368      63120   251.13 MiB/s
+BM_string_memmove/32K                  9747     124692   257.76 MiB/s
+BM_string_memmove/64K                  9501     247616   261.44 MiB/s
+BM_string_memset/8                   499849       1571     2.35 MiB/s
+BM_string_memset/64                  499834       1600    18.56 MiB/s
+BM_string_memset/512                 499834       1658   146.96 MiB/s
+BM_string_memset/1K                  499817       1777   282.09 MiB/s
+BM_string_memset/8K                  499727       2903  1726.14 MiB/s
+BM_string_memset/16K                 499535       4254  2674.27 MiB/s
+BM_string_memset/32K                 199717       7023  3690.51 MiB/s
+BM_string_memset/64K                  99720      13640  4205.93 MiB/s
+BM_string_strlen/8                   499830       1571     2.34 MiB/s
+BM_string_strlen/64                  499815       1615    18.45 MiB/s
+BM_string_strlen/512                 499809       1960   134.81 MiB/s
+BM_string_strlen/1K                  499778       2291   246.90 MiB/s
+BM_string_strlen/8K                  199708       7142   904.73 MiB/s
+BM_string_strlen/16K                 199480      12908  1107.25 MiB/s
+BM_string_strlen/32K                  99501      24185  1254.23 MiB/s
+BM_string_strlen/64K                  49544      45993  1363.08 MiB/s
+BM_time_clock_gettime                499723       3056
+BM_time_clock_gettime_syscall        999387       1534
+BM_time_gettimeofday                1499106       1014
+BM_time_gettimeofday_syscall        1998788        760
+BM_time_time                        2498492        621
+BM_unistd_getpid                    2998331        262
+BM_unistd_getpid_syscall            3498113        296
+BM_unistd_gettid                    3997960        196
+BM_unistd_gettid_syscall            4497762        235

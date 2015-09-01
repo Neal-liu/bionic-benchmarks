@@ -22,14 +22,18 @@ static void BM_semaphore_sem_getvalue(int iters) {
   StopBenchmarkTiming();
   sem_t semaphore;
   sem_init(&semaphore, 1, 1);
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     int dummy;
     sem_getvalue(&semaphore, &dummy);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_semaphore_sem_getvalue);
 
@@ -37,13 +41,17 @@ static void BM_semaphore_sem_wait_sem_post(int iters) {
   StopBenchmarkTiming();
   sem_t semaphore;
   sem_init(&semaphore, 1, 1);
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     sem_wait(&semaphore);
     sem_post(&semaphore);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_semaphore_sem_wait_sem_post);

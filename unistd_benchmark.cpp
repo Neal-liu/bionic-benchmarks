@@ -20,24 +20,32 @@
 #include <unistd.h>
 
 static void BM_unistd_getpid(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     getpid();
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_unistd_getpid);
 
 static void BM_unistd_getpid_syscall(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     syscall(__NR_getpid);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_unistd_getpid_syscall);
 
@@ -45,23 +53,31 @@ BENCHMARK(BM_unistd_getpid_syscall);
 /* Must not be static! */ pid_t (*gettid_fp)() = gettid;
 
 static void BM_unistd_gettid(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     gettid_fp();
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_unistd_gettid);
 
 static void BM_unistd_gettid_syscall(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     syscall(__NR_gettid);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_unistd_gettid_syscall);

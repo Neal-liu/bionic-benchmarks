@@ -20,60 +20,81 @@
 #include <time.h>
 
 static void BM_time_clock_gettime(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   timespec t;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     clock_gettime(CLOCK_MONOTONIC, &t);
+
+  	StopBenchmarkTimingWithStd();
+
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_time_clock_gettime);
 
 static void BM_time_clock_gettime_syscall(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   timespec t;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     syscall(__NR_clock_gettime, CLOCK_MONOTONIC, &t);
+
+ 	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_time_clock_gettime_syscall);
 
 static void BM_time_gettimeofday(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   timeval tv;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     gettimeofday(&tv, NULL);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+// StopBenchmarkTiming();
 }
 BENCHMARK(BM_time_gettimeofday);
 
 static void BM_time_gettimeofday_syscall(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   timeval tv;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     syscall(__NR_gettimeofday, &tv, NULL);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_time_gettimeofday_syscall);
 
 static void BM_time_time(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     time(NULL);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_time_time);

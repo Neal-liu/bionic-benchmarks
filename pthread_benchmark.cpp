@@ -22,13 +22,17 @@
 /* Must not be static! */ pthread_t (*pthread_self_fp)() = pthread_self;
 
 static void BM_pthread_self(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+	  StartBenchmarkTiming();
+
     pthread_self_fp();
+
+	  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_pthread_self);
 
@@ -36,13 +40,17 @@ static void BM_pthread_getspecific(int iters) {
   StopBenchmarkTiming();
   pthread_key_t key;
   pthread_key_create(&key, NULL);
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+	StartBenchmarkTiming();
+
     pthread_getspecific(key);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
   pthread_key_delete(key);
 }
 BENCHMARK(BM_pthread_getspecific);
@@ -54,54 +62,70 @@ static void BM_pthread_once(int iters) {
   StopBenchmarkTiming();
   pthread_once_t once = PTHREAD_ONCE_INIT;
   pthread_once(&once, DummyPthreadOnceInitFunction);
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     pthread_once(&once, DummyPthreadOnceInitFunction);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_pthread_once);
 
 static void BM_pthread_mutex_lock(int iters) {
   StopBenchmarkTiming();
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     pthread_mutex_lock(&mutex);
     pthread_mutex_unlock(&mutex);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_pthread_mutex_lock);
 
 static void BM_pthread_mutex_lock_ERRORCHECK(int iters) {
   StopBenchmarkTiming();
   pthread_mutex_t mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER;
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     pthread_mutex_lock(&mutex);
     pthread_mutex_unlock(&mutex);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_pthread_mutex_lock_ERRORCHECK);
 
 static void BM_pthread_mutex_lock_RECURSIVE(int iters) {
   StopBenchmarkTiming();
   pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     pthread_mutex_lock(&mutex);
     pthread_mutex_unlock(&mutex);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_pthread_mutex_lock_RECURSIVE);

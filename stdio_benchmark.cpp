@@ -29,13 +29,17 @@ static void BM_stdio_fread(int iters, int chunk_size) {
   StopBenchmarkTiming();
   FILE* fp = fopen("/dev/zero", "rw");
   char* buf = new char[chunk_size];
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     fread(buf, chunk_size, 1, fp);
+
+ 	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
   SetBenchmarkBytesProcessed(int64_t(iters) * int64_t(chunk_size));
   delete[] buf;
   fclose(fp);
@@ -47,13 +51,17 @@ static void BM_stdio_fwrite(int iters, int chunk_size) {
   StopBenchmarkTiming();
   FILE* fp = fopen("/dev/zero", "rw");
   char* buf = new char[chunk_size];
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
       fwrite(buf, chunk_size, 1, fp);
+
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
   SetBenchmarkBytesProcessed(int64_t(iters) * int64_t(chunk_size));
   delete[] buf;
   fclose(fp);

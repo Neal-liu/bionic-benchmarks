@@ -28,6 +28,7 @@ benchmark_c_flags = \
     -Werror \
     -fno-builtin \
     -std=gnu++11 \
+	-static \
 
 benchmark_src_files = \
     benchmark_main.cpp \
@@ -52,6 +53,8 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
 LOCAL_CFLAGS += $(benchmark_c_flags)
 LOCAL_C_INCLUDES += external/stlport/stlport bionic/ bionic/libstdc++/include
 LOCAL_SHARED_LIBRARIES += libstlport
+LOCAL_STATIC_LIBRARIES += libc libstlport_static libm
+LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_SRC_FILES := $(benchmark_src_files)
 include $(BUILD_EXECUTABLE)
 
@@ -76,6 +79,7 @@ bionic-benchmarks-run-on-host: bionic-benchmarks $(TARGET_OUT_EXECUTABLES)/$(LIN
 	ANDROID_ROOT=$(TARGET_OUT) \
 	LD_LIBRARY_PATH=$(TARGET_OUT_SHARED_LIBRARIES) \
 		$(TARGET_OUT_EXECUTABLES)/bionic-benchmarks$(NATIVE_SUFFIX) $(BIONIC_BENCHMARKS_FLAGS)
+
 endif # linux-x86
 
 endif # !BUILD_TINY_ANDROID

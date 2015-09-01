@@ -32,7 +32,7 @@
 
 //static unsigned size = 512;
 
-static void BM_malloc_test(int iters, int chunk_size) {
+static void BM_malloc_single(int iters, int chunk_size) {
 	unsigned request_size = chunk_size;
 
 //	StartBenchmarkTiming();
@@ -49,9 +49,9 @@ static void BM_malloc_test(int iters, int chunk_size) {
 //	StopBenchmarkTimingWithStd();
 //	StopBenchmarkTiming();
 }
-BENCHMARK(BM_malloc_test)->AT_COMMON_SIZES;
+BENCHMARK(BM_malloc_single)->AT_COMMON_SIZES;
 
-static void BM_malloc_test2(int iters, int chunk_size) {
+static void BM_malloc_realloc(int iters, int chunk_size) {
 	unsigned request_size = chunk_size;
 
 
@@ -69,10 +69,10 @@ static void BM_malloc_test2(int iters, int chunk_size) {
 //	StopBenchmarkTimingWithStd();
 //	StopBenchmarkTiming();
 }
-BENCHMARK(BM_malloc_test2)->AT_COMMON_SIZES;
+BENCHMARK(BM_malloc_realloc)->AT_COMMON_SIZES;
 
 
-static void BM_malloc_test3(int iters, int chunk_size) {
+static void BM_malloc_multi(int iters, int chunk_size) {
 	int request_size = chunk_size;
 	int *buf = new int[N_ELEMENTS];
 
@@ -91,6 +91,6 @@ static void BM_malloc_test3(int iters, int chunk_size) {
 //	StopBenchmarkTiming();
 
 }
-BENCHMARK(BM_malloc_test3)->AT_CONTINUOUS_SIZES;
+BENCHMARK(BM_malloc_multi)->AT_CONTINUOUS_SIZES;
 
 

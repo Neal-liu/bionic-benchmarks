@@ -24,188 +24,242 @@ double d;
 double v;
 
 static void BM_math_sqrt(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 2.0;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     d += sqrt(v);
+  
+  	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_sqrt);
 
 static void BM_math_log10(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 1234.0;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     d += log10(v);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_log10);
 
 static void BM_math_logb(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 1234.0;
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     d += logb(v);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+  //StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_logb);
 
 static void BM_math_isinf_NORMAL(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 1234.0; // FP_NORMAL
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
     d += (isinf)(v);
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+  //StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_isinf_NORMAL);
 
 static void BM_math_isinf_NAN(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = nan(""); // FP_NAN
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     d += (isinf)(v);
+
+	  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+  //StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_isinf_NAN);
 
 static void BM_math_isinf_INFINITE(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = HUGE_VAL; // FP_INFINITE
   for (int i = 0; i < iters; ++i) {
-    d += (isinf)(v);
+	  StartBenchmarkTiming();
+
+	  d += (isinf)(v);
+
+	  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_isinf_INFINITE);
 
 static void BM_math_isinf_ZERO(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 0.0; // FP_ZERO
   for (int i = 0; i < iters; ++i) {
-    d += (isinf)(v);
+  	StartBenchmarkTiming();
+    
+	d += (isinf)(v);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_isinf_ZERO);
 
 static void BM_math_sin_fast(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 1.0;
   for (int i = 0; i < iters; ++i) {
-    d += sin(d);
+	StartBenchmarkTiming();
+
+	d += sin(d);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_sin_fast);
 
 static void BM_math_sin_feupdateenv(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 1.0;
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
+
     fenv_t __libc_save_rm;
     feholdexcept(&__libc_save_rm);
     fesetround(FE_TONEAREST);
     d += sin(d);
     feupdateenv(&__libc_save_rm);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+  //StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_sin_feupdateenv);
 
 static void BM_math_sin_fesetenv(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 1.0;
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
+
     fenv_t __libc_save_rm;
     feholdexcept(&__libc_save_rm);
     fesetround(FE_TONEAREST);
     d += sin(d);
-    fesetenv(&__libc_save_rm);
+  	fesetenv(&__libc_save_rm);
+
+	StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_sin_fesetenv);
 
 static void BM_math_fpclassify_NORMAL(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 1234.0; // FP_NORMAL
   for (int i = 0; i < iters; ++i) {
+  	StartBenchmarkTiming();
+
     d += fpclassify(v);
+
+	  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_fpclassify_NORMAL);
 
 static void BM_math_fpclassify_NAN(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = nan(""); // FP_NAN
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
+
     d += fpclassify(v);
+
+  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_fpclassify_NAN);
 
 static void BM_math_fpclassify_INFINITE(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = HUGE_VAL; // FP_INFINITE
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
+
     d += fpclassify(v);
+
+  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_fpclassify_INFINITE);
 
 static void BM_math_fpclassify_ZERO(int iters) {
-  StartBenchmarkTiming();
+//  StartBenchmarkTiming();
 
   d = 0.0;
   v = 0.0; // FP_ZERO
   for (int i = 0; i < iters; ++i) {
+  StartBenchmarkTiming();
+
     d += fpclassify(v);
+
+  StopBenchmarkTimingWithStd();
   }
 
-  StopBenchmarkTiming();
+//  StopBenchmarkTiming();
 }
 BENCHMARK(BM_math_fpclassify_ZERO);
