@@ -1,0 +1,22 @@
+diff --git a/libc/upstream-dlmalloc/malloc.c b/libc/upstream-dlmalloc/malloc.c
+index 3c9d36b..df5e7e4 100644
+--- a/libc/upstream-dlmalloc/malloc.c
++++ b/libc/upstream-dlmalloc/malloc.c
+@@ -2833,7 +2833,7 @@ static size_t traverse_and_check(mstate m);
+ #define treebin_at(M,i)     (&((M)->treebins[i]))
+ 
+ /* assign tree index for size S to variable I. Use x86 asm if possible  */
+-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
+ #define compute_tree_index(S, I)\
+ {\
+   unsigned int X = S >> TREEBIN_SHIFT;\
+@@ -2936,7 +2936,7 @@ static size_t traverse_and_check(mstate m);
+ 
+ /* index corresponding to given bit. Use x86 asm if possible */
+ 
+-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
+ #define compute_bit2idx(X, I)\
+ {\
+   unsigned int J;\
