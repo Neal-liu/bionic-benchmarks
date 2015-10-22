@@ -1,0 +1,1137 @@
+diff --git a/benchmarks/Android.mk b/benchmarks/Android.mk
+index 20742bd..0c0d60d 100644
+--- a/benchmarks/Android.mk
++++ b/benchmarks/Android.mk
+@@ -71,6 +71,7 @@ benchmark_src_files := \
+     string_benchmark.cpp \
+     time_benchmark.cpp \
+     unistd_benchmark.cpp \
++	malloc_benchmark.cpp \
+ 
+ # Build benchmarks for the device (with bionic's .so). Run with:
+ #   adb shell bionic-benchmarks32
+@@ -84,6 +85,7 @@ LOCAL_CFLAGS := $(benchmark_cflags)
+ LOCAL_CPPFLAGS := $(benchmark_cppflags)
+ LOCAL_SRC_FILES := $(benchmark_src_files)
+ LOCAL_STATIC_LIBRARIES := libbenchmark libbase
++LOCAL_FORCE_STATIC_EXECUTABLE := true
+ include $(BUILD_EXECUTABLE)
+ 
+ # We don't build a static benchmark executable because it's not usually
+diff --git a/benchmarks/Benchmark.cpp b/benchmarks/Benchmark.cpp
+index ea6000f..e6e99f9 100644
+--- a/benchmarks/Benchmark.cpp
++++ b/benchmarks/Benchmark.cpp
+@@ -20,6 +20,7 @@
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <time.h>
++#include <math.h>
+ 
+ #include <string>
+ #include <vector>
+@@ -84,6 +85,27 @@ bool BenchmarkT<T>::ShouldRun(std::vector<regex_t*>& regs, T arg) {
+   return false;
+ }
+ 
++void Benchmark::StopBenchmarkTimingWithStd() {
++  if (start_time_ns_ != 0) {
++	double interval = NanoTime() - start_time_ns_;
++	each_time_ns_[count] = interval;
++    total_time_ns_ += NanoTime() - start_time_ns_;
++	count++;
++  }
++  start_time_ns_ = 0;
++}
++
++void Benchmark::StopBenchmarkTimingWithStdArg(int iters) {
++  if (start_time_ns_ != 0) {
++    double interval = NanoTime() - start_time_ns_;
++    each_time_ns_[count] = interval/(double)iters;
++    total_time_ns_ += interval/(double)iters;
++    count ++;
++  }
++  start_time_ns_ = 0;
++}
++
++
+ void Benchmark::StopBenchmarkTiming() {
+   if (start_time_ns_ != 0) {
+     total_time_ns_ += NanoTime() - start_time_ns_;
+@@ -97,6 +119,37 @@ void Benchmark::StartBenchmarkTiming() {
+   }
+ }
+ 
++/* Calculate Standard Diviation */
++void Benchmark::Standard() {
++    int i;
++    double average = 0, standard = 0, sigma = 0, value = 0;
++    average = total_time_ns_/Iterations;
++    
++    for(i = 0 ; i < Iterations ; i++) {
++        standard = each_time_ns_[i] - average;
++        standard *= standard;
++        sigma += standard;
++    }
++    sigma /= Iterations;
++    value = sqrt(sigma);
++    Confidence(average, value);
++}
++
++/* Take the value between 95% confidence level. */
++void Benchmark::Confidence(double average, double value) {
++    int i;
++    int64_t max = average + 2*value;
++    int64_t min = average - 2*value;
++
++    total_time_ns_ = 0;
++    for(i = 0 ; i<Iterations ; i++) {
++        if(each_time_ns_[i]<max && each_time_ns_[i]>min) {
++            total_time_ns_ += each_time_ns_[i];
++            con_iterations++;
++        }
++    }
++}
++
+ std::string BenchmarkWithoutArg::GetNameStr(void*) {
+   return Name();
+ }
+@@ -121,7 +174,12 @@ void BenchmarkT<T>::RunWithArg(T arg) {
+     start_time_ns_ = 0;
+ 
+     iterations = new_iterations;
++
++	count = 0;
++	/* new array to store each time */
++	each_time_ns_ = new double[iterations];
+     RunIterations(iterations, arg);
++	
+     if (total_time_ns_ >= 1e9) {
+       break;
+     }
+@@ -137,6 +195,14 @@ void BenchmarkT<T>::RunWithArg(T arg) {
+     new_iterations = Round(new_iterations);
+   }
+ 
++	/* calculate Standard diviation */
++	Iterations = iterations;
++	Standard();
++	iterations = con_iterations;
++	printf("iterations down to %d\n", iterations);
++	delete each_time_ns_;
++	con_iterations = 0;
++
+   printf("%-*s %10s %10" PRId64, MaxNameColumnWidth(), GetNameStr(arg).c_str(),
+          PrettyInt(iterations, 10).c_str(), total_time_ns_/iterations);
+ 
+diff --git a/benchmarks/benchmark/Benchmark.h b/benchmarks/benchmark/Benchmark.h
+index ae5c1a2..d24a059 100644
+--- a/benchmarks/benchmark/Benchmark.h
++++ b/benchmarks/benchmark/Benchmark.h
+@@ -38,8 +38,13 @@ public:
+ 
+   void SetBenchmarkBytesProcessed(uint64_t bytes) { bytes_processed_ += bytes; }
+   void StopBenchmarkTiming();
++  void StopBenchmarkTimingWithStd();
++  void StopBenchmarkTimingWithStdArg(int);
+   void StartBenchmarkTiming();
+ 
++  void Standard();
++  void Confidence(double, double); 
++
+   // Run all of the benchmarks that have registered.
+   static size_t RunAll(std::vector<regex_t*>&);
+ 
+@@ -53,6 +58,10 @@ protected:
+   uint64_t bytes_processed_;
+   uint64_t total_time_ns_;
+   uint64_t start_time_ns_;
++  double *each_time_ns_;
++  int Iterations;
++  uint64_t count;  
++  uint64_t con_iterations = 0;
+ 
+   static bool header_printed_;
+ 
+diff --git a/benchmarks/math_benchmark.cpp b/benchmarks/math_benchmark.cpp
+index ed5b56c..81c9c12 100644
+--- a/benchmarks/math_benchmark.cpp
++++ b/benchmarks/math_benchmark.cpp
+@@ -28,54 +28,62 @@ volatile double v;
+ 
+ BENCHMARK_NO_ARG(BM_math_sqrt);
+ void BM_math_sqrt::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = 2.0;
+   for (int i = 0; i < iters; ++i) {
++	StartBenchmarkTiming();
+     d += sqrt(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_math_log10);
+ void BM_math_log10::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = 1234.0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += log10(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_math_logb);
+ void BM_math_logb::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = 1234.0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += logb(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isfinite_macro, double)->AT_COMMON_VALS;
+ void BM_math_isfinite_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += isfinite(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ #if defined(__BIONIC__)
+@@ -85,202 +93,232 @@ void BM_math_isfinite_macro::Run(int iters, double value) {
+ #endif
+ BENCHMARK_WITH_ARG(BM_math_isfinite, double)->AT_COMMON_VALS;
+ void BM_math_isfinite::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += test_isfinite(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isinf_macro, double)->AT_COMMON_VALS;
+ void BM_math_isinf_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += isinf(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isinf, double)->AT_COMMON_VALS;
+ void BM_math_isinf::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += (isinf)(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isnan_macro, double)->AT_COMMON_VALS;
+ void BM_math_isnan_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += isnan(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isnan, double)->AT_COMMON_VALS;
+ void BM_math_isnan::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += (isnan)(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_isnormal_macro, double)->AT_COMMON_VALS;
+ void BM_math_isnormal_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += isnormal(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ #if defined(__BIONIC__)
+ BENCHMARK_WITH_ARG(BM_math_isnormal, double)->AT_COMMON_VALS;
+ void BM_math_isnormal::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += (__isnormal)(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ #endif
+ 
+ BENCHMARK_NO_ARG(BM_math_sin_fast);
+ void BM_math_sin_fast::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 1.0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += sin(d);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_math_sin_feupdateenv);
+ void BM_math_sin_feupdateenv::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 1.0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     fenv_t __libc_save_rm;
+     feholdexcept(&__libc_save_rm);
+     fesetround(FE_TONEAREST);
+     d += sin(d);
+     feupdateenv(&__libc_save_rm);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_math_sin_fesetenv);
+ void BM_math_sin_fesetenv::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 1.0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     fenv_t __libc_save_rm;
+     feholdexcept(&__libc_save_rm);
+     fesetround(FE_TONEAREST);
+     d += sin(d);
+     fesetenv(&__libc_save_rm);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_fpclassify, double)->AT_COMMON_VALS;
+ void BM_math_fpclassify::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += fpclassify(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_signbit_macro, double)->AT_COMMON_VALS;
+ void BM_math_signbit_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += signbit(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_signbit, double)->AT_COMMON_VALS;
+ void BM_math_signbit::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += (__signbit)(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_fabs_macro, double)->AT_COMMON_VALS;
+ void BM_math_fabs_macro::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++ 	StartBenchmarkTiming();
+     d += fabs(v);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_math_fabs, double)->AT_COMMON_VALS;
+ void BM_math_fabs::Run(int iters, double value) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   d = 0.0;
+   v = value;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     d += (fabs)(v);
++	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+diff --git a/benchmarks/property_benchmark.cpp b/benchmarks/property_benchmark.cpp
+index 944cd68..d0b1f7b 100644
+--- a/benchmarks/property_benchmark.cpp
++++ b/benchmarks/property_benchmark.cpp
+@@ -152,12 +152,14 @@ void BM_property_get::Run(int iters, int nprops) {
+ 
+   srandom(iters * nprops);
+ 
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; i++) {
++  	StartBenchmarkTiming();
+     __system_property_get(pa.names[random() % nprops], value);
++  	StopBenchmarkTimingWithStd();
+   }
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_property_find, int)->TEST_NUM_PROPS;
+@@ -171,12 +173,14 @@ void BM_property_find::Run(int iters, int nprops) {
+ 
+   srandom(iters * nprops);
+ 
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; i++) {
++  	StartBenchmarkTiming();
+     __system_property_find(pa.names[random() % nprops]);
++  	StopBenchmarkTimingWithStd();
+   }
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_WITH_ARG(BM_property_read, int)->TEST_NUM_PROPS;
+@@ -196,11 +200,13 @@ void BM_property_read::Run(int iters, int nprops) {
+     pinfo[i] = __system_property_find(pa.names[random() % nprops]);
+   }
+ 
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+   for (int i = 0; i < iters; i++) {
++  	StartBenchmarkTiming();
+     __system_property_read(pinfo[i], 0, propvalue);
++  	StopBenchmarkTimingWithStd();
+   }
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ 
+   delete[] pinfo;
+ }
+@@ -221,11 +227,13 @@ void BM_property_serial::Run(int iters, int nprops) {
+     pinfo[i] = __system_property_find(pa.names[random() % nprops]);
+   }
+ 
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+   for (int i = 0; i < iters; i++) {
++  	StartBenchmarkTiming();
+     __system_property_serial(pinfo[i]);
++  	StopBenchmarkTimingWithStd();
+   }
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ 
+   delete[] pinfo;
+ }
+diff --git a/benchmarks/pthread_benchmark.cpp b/benchmarks/pthread_benchmark.cpp
+index ad31e7e..94e0aef 100644
+--- a/benchmarks/pthread_benchmark.cpp
++++ b/benchmarks/pthread_benchmark.cpp
+@@ -23,13 +23,15 @@
+ 
+ BENCHMARK_NO_ARG(BM_pthread_self);
+ void BM_pthread_self::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_self_fp();
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_pthread_getspecific);
+@@ -37,13 +39,15 @@ void BM_pthread_getspecific::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_key_t key;
+   pthread_key_create(&key, NULL);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_getspecific(key);
++  	StopBenchmarkTiming();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   pthread_key_delete(key);
+ }
+ 
+@@ -52,13 +56,15 @@ void BM_pthread_setspecific::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_key_t key;
+   pthread_key_create(&key, NULL);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_setspecific(key, NULL);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   pthread_key_delete(key);
+ }
+ 
+@@ -70,55 +76,63 @@ void BM_pthread_once::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_once_t once = PTHREAD_ONCE_INIT;
+   pthread_once(&once, DummyPthreadOnceInitFunction);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_once(&once, DummyPthreadOnceInitFunction);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_pthread_mutex_lock);
+ void BM_pthread_mutex_lock::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_mutex_lock(&mutex);
+     pthread_mutex_unlock(&mutex);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_pthread_mutex_lock_ERRORCHECK);
+ void BM_pthread_mutex_lock_ERRORCHECK::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_mutex_t mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_mutex_lock(&mutex);
+     pthread_mutex_unlock(&mutex);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_pthread_mutex_lock_RECURSIVE);
+ void BM_pthread_mutex_lock_RECURSIVE::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_mutex_lock(&mutex);
+     pthread_mutex_unlock(&mutex);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_pthread_rwlock_read);
+@@ -126,14 +140,16 @@ void BM_pthread_rwlock_read::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_rwlock_t lock;
+   pthread_rwlock_init(&lock, NULL);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_rwlock_rdlock(&lock);
+     pthread_rwlock_unlock(&lock);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   pthread_rwlock_destroy(&lock);
+ }
+ 
+@@ -142,14 +158,16 @@ void BM_pthread_rwlock_write::Run(int iters) {
+   StopBenchmarkTiming();
+   pthread_rwlock_t lock;
+   pthread_rwlock_init(&lock, NULL);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     pthread_rwlock_wrlock(&lock);
+     pthread_rwlock_unlock(&lock);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   pthread_rwlock_destroy(&lock);
+ }
+ 
+@@ -165,14 +183,14 @@ void BM_pthread_create::Run(int iters) {
+   for (int i = 0; i < iters; ++i) {
+     StartBenchmarkTiming();
+     pthread_create(&thread, NULL, IdleThread, NULL);
+-    StopBenchmarkTiming();
++    StopBenchmarkTimingWithStd();
+     pthread_join(thread, NULL);
+   }
+ }
+ 
+ static void* RunThread(void* arg) {
+   ::testing::Benchmark* benchmark = reinterpret_cast<::testing::Benchmark*>(arg);
+-  benchmark->StopBenchmarkTiming();
++  benchmark->StopBenchmarkTimingWithStd();
+   return NULL;
+ }
+ 
+@@ -202,7 +220,7 @@ void BM_pthread_exit_and_join::Run(int iters) {
+   for (int i = 0; i < iters; ++i) {
+     pthread_create(&thread, NULL, ExitThread, this);
+     pthread_join(thread, NULL);
+-    StopBenchmarkTiming();
++    StopBenchmarkTimingWithStd();
+   }
+ }
+ 
+@@ -214,7 +232,7 @@ void BM_pthread_key_create::Run(int iters) {
+   for (int i = 0; i < iters; ++i) {
+     StartBenchmarkTiming();
+     pthread_key_create(&key, NULL);
+-    StopBenchmarkTiming();
++    StopBenchmarkTimingWithStd();
+     pthread_key_delete(key);
+   }
+ }
+@@ -228,6 +246,6 @@ void BM_pthread_key_delete::Run(int iters) {
+     pthread_key_create(&key, NULL);
+     StartBenchmarkTiming();
+     pthread_key_delete(key);
+-    StopBenchmarkTiming();
++    StopBenchmarkTimingWithStd();
+   }
+ }
+diff --git a/benchmarks/semaphore_benchmark.cpp b/benchmarks/semaphore_benchmark.cpp
+index 8dd5684..d6cf1e0 100644
+--- a/benchmarks/semaphore_benchmark.cpp
++++ b/benchmarks/semaphore_benchmark.cpp
+@@ -26,14 +26,16 @@ void BM_semaphore_sem_getvalue::Run(int iters) {
+   StopBenchmarkTiming();
+   sem_t semaphore;
+   sem_init(&semaphore, 1, 1);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     int dummy;
+     sem_getvalue(&semaphore, &dummy);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_semaphore_sem_wait_sem_post);
+@@ -41,14 +43,16 @@ void BM_semaphore_sem_wait_sem_post::Run(int iters) {
+   StopBenchmarkTiming();
+   sem_t semaphore;
+   sem_init(&semaphore, 1, 1);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     sem_wait(&semaphore);
+     sem_post(&semaphore);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ /*
+@@ -127,7 +131,7 @@ void BM_semaphore_sem_post::Run(int iters) {
+     sched_setscheduler((pid_t)0, SCHED_FIFO, &param);
+     StartBenchmarkTiming();
+     sem_post(&semaphore);
+-    StopBenchmarkTiming(); // Remember to subtract clock syscall overhead
++    StopBenchmarkTimingWithStd(); // Remember to subtract clock syscall overhead
+     param.sched_priority = 0;
+     sched_setscheduler((pid_t)0, SCHED_IDLE, &param);
+   }
+diff --git a/benchmarks/stdio_benchmark.cpp b/benchmarks/stdio_benchmark.cpp
+index 69e01a9..9bd56fd 100644
+--- a/benchmarks/stdio_benchmark.cpp
++++ b/benchmarks/stdio_benchmark.cpp
+@@ -33,17 +33,19 @@ void ReadWriteTest(::testing::Benchmark* benchmark, int iters, int chunk_size, F
+   FILE* fp = fopen("/dev/zero", "rw");
+   __fsetlocking(fp, FSETLOCKING_BYCALLER);
+   char* buf = new char[chunk_size];
+-  benchmark->StartBenchmarkTiming();
++//  benchmark->StartBenchmarkTiming();
+ 
+   if (!buffered) {
+     setvbuf(fp, 0, _IONBF, 0);
+   }
+ 
+   for (int i = 0; i < iters; ++i) {
++  	benchmark->StartBenchmarkTiming();
+     f(buf, chunk_size, 1, fp);
++  	benchmark->StopBenchmarkTimingWithStd();
+   }
+ 
+-  benchmark->StopBenchmarkTiming();
++//  benchmark->StopBenchmarkTiming();
+   benchmark->SetBenchmarkBytesProcessed(int64_t(iters) * int64_t(chunk_size));
+   delete[] buf;
+   fclose(fp);
+@@ -69,26 +71,28 @@ void BM_stdio_fwrite_unbuffered::Run(int iters, int chunk_size) {
+   ReadWriteTest(this, iters, chunk_size, fwrite, false);
+ }
+ 
+-static void FopenFgetsFclose(int iters, bool no_locking) {
++static void FopenFgetsFclose(::testing::Benchmark* benchmark, int iters, bool no_locking) {
+   char buf[1024];
+   for (int i = 0; i < iters; ++i) {
++  	benchmark->StartBenchmarkTiming();
+     FILE* fp = fopen("/proc/version", "re");
+     if (no_locking) __fsetlocking(fp, FSETLOCKING_BYCALLER);
+     if (fgets(buf, sizeof(buf), fp) == nullptr) abort();
+     fclose(fp);
++  	benchmark->StopBenchmarkTimingWithStd();
+   }
+ }
+ 
+ BENCHMARK_NO_ARG(BM_stdio_fopen_fgets_fclose_locking);
+ void BM_stdio_fopen_fgets_fclose_locking::Run(int iters) {
+-  StartBenchmarkTiming();
+-  FopenFgetsFclose(iters, false);
+-  StopBenchmarkTiming();
++//  StartBenchmarkTiming();
++  FopenFgetsFclose(this, iters, false);
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_stdio_fopen_fgets_fclose_no_locking);
+ void BM_stdio_fopen_fgets_fclose_no_locking::Run(int iters) {
+-  StartBenchmarkTiming();
+-  FopenFgetsFclose(iters, true);
+-  StopBenchmarkTiming();
++//  StartBenchmarkTiming();
++  FopenFgetsFclose(this, iters, true);
++//  StopBenchmarkTiming();
+ }
+diff --git a/benchmarks/string_benchmark.cpp b/benchmarks/string_benchmark.cpp
+index 866aa00..cae2cf9 100644
+--- a/benchmarks/string_benchmark.cpp
++++ b/benchmarks/string_benchmark.cpp
+@@ -33,14 +33,16 @@ void BM_string_memcmp::Run(int iters, int nbytes) {
+   char* src = new char[nbytes]; char* dst = new char[nbytes];
+   memset(src, 'x', nbytes);
+   memset(dst, 'x', nbytes);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   volatile int c __attribute__((unused)) = 0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     c += memcmp(dst, src, nbytes);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   SetBenchmarkBytesProcessed(uint64_t(iters) * uint64_t(nbytes));
+   delete[] src;
+   delete[] dst;
+@@ -51,13 +53,15 @@ void BM_string_memcpy::Run(int iters, int nbytes) {
+   StopBenchmarkTiming();
+   char* src = new char[nbytes]; char* dst = new char[nbytes];
+   memset(src, 'x', nbytes);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     memcpy(dst, src, nbytes);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   SetBenchmarkBytesProcessed(uint64_t(iters) * uint64_t(nbytes));
+   delete[] src;
+   delete[] dst;
+@@ -68,13 +72,15 @@ void BM_string_memmove::Run(int iters, int nbytes) {
+   StopBenchmarkTiming();
+   char* buf = new char[nbytes + 64];
+   memset(buf, 'x', nbytes + 64);
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     memmove(buf, buf + 1, nbytes); // Worst-case overlap.
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   SetBenchmarkBytesProcessed(uint64_t(iters) * uint64_t(nbytes));
+   delete[] buf;
+ }
+@@ -83,13 +89,15 @@ BENCHMARK_WITH_ARG(BM_string_memset, int)->AT_COMMON_SIZES;
+ void BM_string_memset::Run(int iters, int nbytes) {
+   StopBenchmarkTiming();
+   char* dst = new char[nbytes];
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     memset(dst, 0, nbytes);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   SetBenchmarkBytesProcessed(uint64_t(iters) * uint64_t(nbytes));
+   delete[] dst;
+ }
+@@ -100,14 +108,16 @@ void BM_string_strlen::Run(int iters, int nbytes) {
+   char* s = new char[nbytes];
+   memset(s, 'x', nbytes);
+   s[nbytes - 1] = 0;
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   volatile int c __attribute__((unused)) = 0;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     c += strlen(s);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+   SetBenchmarkBytesProcessed(uint64_t(iters) * uint64_t(nbytes));
+   delete[] s;
+ }
+diff --git a/benchmarks/time_benchmark.cpp b/benchmarks/time_benchmark.cpp
+index 1b0d08d..c72dea2 100644
+--- a/benchmarks/time_benchmark.cpp
++++ b/benchmarks/time_benchmark.cpp
+@@ -23,59 +23,69 @@
+ 
+ BENCHMARK_NO_ARG(BM_time_clock_gettime);
+ void BM_time_clock_gettime::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   timespec t;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     clock_gettime(CLOCK_MONOTONIC, &t);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_time_clock_gettime_syscall);
+ void BM_time_clock_gettime_syscall::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   timespec t;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     syscall(__NR_clock_gettime, CLOCK_MONOTONIC, &t);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_time_gettimeofday);
+ void BM_time_gettimeofday::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   timeval tv;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     gettimeofday(&tv, NULL);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_time_gettimeofday_syscall);
+ void BM_time_gettimeofday_syscall::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   timeval tv;
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     syscall(__NR_gettimeofday, &tv, NULL);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_time_time);
+ void BM_time_time::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     time(NULL);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+diff --git a/benchmarks/unistd_benchmark.cpp b/benchmarks/unistd_benchmark.cpp
+index 09ca0e6..ef4b19c 100644
+--- a/benchmarks/unistd_benchmark.cpp
++++ b/benchmarks/unistd_benchmark.cpp
+@@ -21,24 +21,28 @@
+ 
+ BENCHMARK_NO_ARG(BM_unistd_getpid);
+ void BM_unistd_getpid::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     getpid();
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ BENCHMARK_NO_ARG(BM_unistd_getpid_syscall);
+ void BM_unistd_getpid_syscall::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     syscall(__NR_getpid);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ #if defined(__BIONIC__)
+@@ -48,24 +52,28 @@ void BM_unistd_getpid_syscall::Run(int iters) {
+ 
+ BENCHMARK_NO_ARG(BM_unistd_gettid);
+ void BM_unistd_gettid::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     gettid_fp();
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
+ 
+ #endif
+ 
+ BENCHMARK_NO_ARG(BM_unistd_gettid_syscall);
+ void BM_unistd_gettid_syscall::Run(int iters) {
+-  StartBenchmarkTiming();
++//  StartBenchmarkTiming();
+ 
+   for (int i = 0; i < iters; ++i) {
++  	StartBenchmarkTiming();
+     syscall(__NR_gettid);
++  	StopBenchmarkTimingWithStd();
+   }
+ 
+-  StopBenchmarkTiming();
++//  StopBenchmarkTiming();
+ }
